@@ -2,11 +2,15 @@
 
 import argparse
 from pathlib import Path
-
 import matplotlib.pyplot as plt
-
 from parse_functions import parse_rosbag
 
+# # 打开文件并逐行读取
+# with open('example.txt', 'r', encoding='utf-8') as file:
+#     for line in file:
+#         # 对每一行进行处理
+#         processed_line = line.strip()  # 去除行末的换行符和空白字符
+#         print(processed_line)  # 打印处理后的行
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()

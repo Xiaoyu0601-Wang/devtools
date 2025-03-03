@@ -27,7 +27,6 @@ def load_calibration(calib_file):
 
 def process_imu_data(filename, calib_file='calibration.json'):
     calib = load_calibration(calib_file)
-    
     time_stamps = []
     accel = [[] for _ in range(3)]
     gyro = [[] for _ in range(3)]
@@ -98,7 +97,6 @@ def process_imu_data(filename, calib_file='calibration.json'):
         if temp_windows[idx]:
             window_centers.append(idx*0.1 + 0.05)
             temp_avg.append(sum(temp_windows[idx])/len(temp_windows[idx]))
-
     return {
         'accel': calc_stats(accel, 'g'),
         'gyro': calc_stats(gyro, 'dps'),
@@ -128,7 +126,6 @@ def plot_sensor_data(data, filename, sensor_name, filtered=False):
         plt.axhline(0, color='red', linestyle='--', linewidth=1, label='Zero Reference')
         plt.axhspan(-3*stats['std'][i], 3*stats['std'][i], 
                    color='orange', alpha=0.2, label='±3σ Range')
-        
         plt.ylabel(f'{axes[i]} Axis ({stats["unit"]})')
         plt.grid(True, alpha=0.3)
         plt.legend(loc='upper right', fontsize=8)
@@ -239,4 +236,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

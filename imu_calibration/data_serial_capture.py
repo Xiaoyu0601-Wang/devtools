@@ -5,6 +5,7 @@ import sys
 
 def capture_serial_data(port, baudrate=115200, duration=60):
     """
+
     从串口捕获指定时长的IMU数据（适配浮点数格式）
     :param port: 串口设备路径 (如 '/dev/ttyUSB0')
     :param baudrate: 波特率 (默认115200)
@@ -154,4 +155,3 @@ if __name__ == "__main__":
     print("\nGenerated files:")
     print("- sensor_data.csv : 原始传感器数据 + 过滤后数据")
     print("- quaternions.csv : 四元数数据")
-

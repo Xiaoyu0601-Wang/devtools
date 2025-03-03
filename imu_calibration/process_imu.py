@@ -32,6 +32,9 @@ def process_imu_data(filename, calib_file='calibration.json'):
     accel = [[] for _ in range(3)]
     gyro = [[] for _ in range(3)]
     temperature = []
+    accel_filt = [[] for _ in range(3)]
+    gyro_filt = [[] for _ in range(3)]
+    temp_filt = []
     temp_windows = defaultdict(list)
     valid_line_count = 0
     
@@ -40,7 +43,7 @@ def process_imu_data(filename, calib_file='calibration.json'):
         next(csv_reader)  # 跳过标题行
         
         for line_num, parts in enumerate(csv_reader, 1):
-            if len(parts) != 7:
+            if len(parts) != 14:
                 print(f"Skipped invalid line {line_num}: Incorrect column count")
                 continue
             
@@ -49,6 +52,9 @@ def process_imu_data(filename, calib_file='calibration.json'):
                 accel_raw = list(map(float, parts[0:3]))
                 gyro_raw = list(map(float, parts[3:6]))
                 temp = int(parts[6])
+                accel_filt_raw = list(map(float, parts[7:10]))
+                gyro_filt_raw = list(map(float, parts[10:13]))
+                temp_filt_raw = int(parts[13])
                 
                 # 应用校准
                 accel_cal = [(accel_raw[i] - calib['accel_bias'][i]) * calib['accel_scale'][i] for i in range(3)]
@@ -63,7 +69,10 @@ def process_imu_data(filename, calib_file='calibration.json'):
                 for i in range(3):
                     accel[i].append(accel_cal[i])
                     gyro[i].append(gyro_cal[i])
+                    accel_filt[i].append(accel_filt_raw[i])
+                    gyro_filt[i].append(gyro_filt_raw[i])
                 temperature.append(temp)
+                temp_filt.append(temp_filt_raw)
                 
                 # 温度窗口处理
                 window_idx = int(t * 10)
@@ -75,6 +84,9 @@ def process_imu_data(filename, calib_file='calibration.json'):
 
     # 计算统计量
     def calc_stats(data, unit):
+        if not all(len(ch) > 0 for ch in data):  # 检查每个数据列是否为空
+            return {'bias': [0.0, 0.0, 0.0], 'std': [0.0, 0.0, 0.0], 'unit': unit}
+        
         means = [sum(ch)/len(ch) for ch in data]
         stds = [(sum((x-mean)**2 for x in ch)/len(ch))**0.5 for ch, mean in zip(data, means)]
         return {'bias': means, 'std': stds, 'unit': unit}
@@ -93,10 +105,13 @@ def process_imu_data(filename, calib_file='calibration.json'):
         'temp_raw': (time_stamps, temperature),
         'accel_raw': (time_stamps, accel),
         'gyro_raw': (time_stamps, gyro),
+        'accel_filt': (time_stamps, accel_filt),
+        'gyro_filt': (time_stamps, gyro_filt),
+        'temp_filt': (time_stamps, temp_filt),
         'temp_avg': (window_centers, temp_avg)
     }
 
-def plot_sensor_data(data, filename, sensor_name):
+def plot_sensor_data(data, filename, sensor_name, filtered=False):
     """绘制传感器数据（英文标签）"""
     plt.figure(figsize=(12, 8))
     
@@ -107,7 +122,7 @@ def plot_sensor_data(data, filename, sensor_name):
     for i in range(3):
         plt.subplot(3, 1, i+1)
         plt.plot(time_stamps, sensor_data[i], 
-                color=colors[i], linewidth=0.5, label='Calibrated Data')
+                color=colors[i], linewidth=0.5, label='Filtered Data' if filtered else 'Raw Data')
         
         # 绘制统计参考线
         plt.axhline(0, color='red', linestyle='--', linewidth=1, label='Zero Reference')
@@ -138,6 +153,10 @@ def plot_temperature(data, filename):
     plt.scatter(data['temp_avg'][0], data['temp_avg'][1],
                color='red', s=20, zorder=3, label='100ms Average')
     
+    # 滤波后的温度数据
+    plt.plot(data['temp_filt'][0], data['temp_filt'][1], 
+             color='green', alpha=0.7, linewidth=0.8, label='Filtered Data')
+    
     plt.title('Temperature Sensor Data')
     plt.xlabel('Time (seconds)')
     plt.ylabel('Temperature (Raw Units)')
@@ -159,20 +178,32 @@ def main():
     # 生成图表文件
     plot_files = {
         'temperature': f"{base_name}_temperature.png",
-        'acceleration': f"{base_name}_accel.png",
-        'gyroscope': f"{base_name}_gyro.png"
+        'acceleration_raw': f"{base_name}_accel_raw.png",
+        'gyroscope_raw': f"{base_name}_gyro_raw.png",
+        'acceleration_filtered': f"{base_name}_accel_filtered.png",
+        'gyroscope_filtered': f"{base_name}_gyro_filtered.png"
     }
     
     plot_temperature(results, plot_files['temperature'])
     plot_sensor_data(
         (results['accel_raw'][0], results['accel_raw'][1], results['accel']),
-        plot_files['acceleration'], 
-        "Accelerometer"
+        plot_files['acceleration_raw'], 
+        "Accelerometer", filtered=False
     )
     plot_sensor_data(
         (results['gyro_raw'][0], results['gyro_raw'][1], results['gyro']),
-        plot_files['gyroscope'], 
-        "Gyroscope"
+        plot_files['gyroscope_raw'], 
+        "Gyroscope", filtered=False
+    )
+    plot_sensor_data(
+        (results['accel_filt'][0], results['accel_filt'][1], results['accel']),
+        plot_files['acceleration_filtered'], 
+        "Accelerometer", filtered=True
+    )
+    plot_sensor_data(
+        (results['gyro_filt'][0], results['gyro_filt'][1], results['gyro']),
+        plot_files['gyroscope_filtered'], 
+        "Gyroscope", filtered=True
     )
 
     # 保存统计结果
@@ -208,3 +239,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

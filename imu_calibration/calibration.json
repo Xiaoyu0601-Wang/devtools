@@ -1,5 +1,5 @@
 {
     "accel_bias": [0.000, -0.000, 0.000],
-    "accel_scale": [1, 1, 1],
+    "accel_scale": [1.02, 1.01, 0.99],
     "gyro_bias": [0, 0, 0]
 }
